@@ -1,0 +1,264 @@
+\documentclass{article}
+\usepackage{fullpage}
+\usepackage{parskip}
+\usepackage{standalone}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{xurl}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage{empheq}
+\usepackage{xfrac}
+\usepackage{enumitem}
+\usepackage[table]{xcolor}
+\usepackage{xfrac}
+\usepackage{bbm}
+\usepackage{siunitx}
+\usepackage{array}
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+\usetikzlibrary{decorations.pathreplacing}
+\usetikzlibrary{calc}
+\usetikzlibrary{shapes.geometric}
+\usetikzlibrary{decorations.markings}
+\usetikzlibrary{shapes.geometric}
+\usetikzlibrary{patterns,snakes}
+\usetikzlibrary{decorations.text}
+\usetikzlibrary{arrows.meta}
+\usepackage{cases}
+\usepackage{tcolorbox}
+\usepackage{arydshln}
+
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\title{\bf Modelling Deadlock Resolution in Open Restricted Queueing Networks}
+\author{Geraint I. Palmer-Liyu}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}\label{sec:introduction}
+
+\section{Preliminaries and System Model}\label{sec:recap}
+This work builds directly on the work of \cite{palmer2018modelling}, which
+considered deadlock detection in discrete event simulations (DES) of open
+restricted queueing networks, and analysed Markovian models of deadlocking
+queueing system.
+The simulation software used is the Ciw library in Python \cite{palmer2019ciw},
+although the methodology is appropriate for general DES.
+We are concerned with open restricted queueing networks that experience Type I
+blocking.
+Queueing networks are described as open if customers can enter and leave the 
+system from the exterior, while restricted networks contain at least one service
+centre with limited queueing space or capacity before it, turning away
+externally arriving customers when full, and inducing blocking for internally
+routed customers when full.
+
+This paper considers Type I blocking only \cite{onvural1986equivalencies}: once
+a customer finishes their service and wishes to join another node's queue, they
+are blocked from joining that queue if it is full; while blocked that customer
+remains with its server until capacity becomes available at its destination;
+during this time that server is unavailable to begin another customer's service
+This gives rise to the idea that one customer can be blocked by another
+customer: that is if customer A at node 1 is blocked from entering node 2
+because it is full, then customer A is waiting on the customers who are with the
+servers at node 2 to exit, hence customer A is blocked by the customers who are
+with the servers of node 2.
+\textit{Deadlock occurs when a subset of blocked customers are blocked by
+customers in that subset only.}
+
+In \cite{palmer2018modelling} a graph theoretic approach to detecting deadlock
+during a simulation run is given:
+Let $D(t) = (V, E(t))$ be the state digraph of a queueing system, with set of
+vertices $V$ corresponding to the servers of all service centres, and a set of
+directed edges $E(t)$ representing blockage relationships: if a customer at the
+$k$th server of node $i$ is blocked from entering node $j$, then there are
+directed edges from the vertex corresponding to node $i$'s $k$th server to every
+vertex corresponding to the servers of node $j$.
+Then it is shown that \textit{deadlock occurs at time $t$ if and only if $D(t)$
+contains a knot}, that is a strongly connected component with no sink.
+Figure~\ref{fig:exampledigraph} shows an example of a three node queueing
+network in deadlock with the corresponding state digraph.
+
+\begin{figure}
+\begin{center}
+\includestandalone[width=0.75\textwidth]{../images/example_digraph}
+\end{center}
+\caption{Example of a three node network in deadlock, and the state digraph
+$D(t)$ that describes the blocking relationships. Customers with servers $A_1$,
+$B_2$ and $C_1$ are blocked to node $B$, while the customer with server $B_1$ is
+blocked to node $A$. The knot within $D(t)$ is highlighted - note that server
+$C_1$ is not part of the knot, as no deadlocked customer is waiting for this
+server to be free.}
+\label{fig:exampledigraph}
+\end{figure}
+
+This paper builds on this graph theoretic foundation to consider deadlock
+resolutions with no perceptible disruption to the customers' or the servers'
+experiences.
+First let's consider the unblocking behaviours, that is the cascading sequence
+of servers freeing customers and capacity freeing up that occurs when a customer
+blocking other customers is able to free a server.
+By understanding this behaviour we then design an deadlock resolution method in
+Section~\ref{sec:resolution}.
+
+
+\section{Sequences of Unblockages}\label{sec:unblockages}
+At any time $t$ during the simulation, some subset of the customers may be
+blocked.
+Define a blockage event as one specific instance of a specific customer being
+blocked, and write $B_k$ as the $k$th blockage to occur during the simulation
+run.
+Now:
+
+\begin{definition}
+Let $(B_n)_{n \in \mathcal{N}(t)}$ be the sequence of active blockage events at
+time $t$, where $\mathcal{N}(t) \subset \mathbb{N}$, and $|\mathcal{N}|$ is
+bounded above by the number of servers in the queueing network.
+\end{definition}
+
+Blockage events are associated with both individual customers and the servers
+who are occupied with the blocked customers.
+Recall that $V$, the set of vertices of the state digraph $D(t)$, represents the
+set of all servers, therefore there is a mapping between blockage events and
+servers:
+
+\begin{definition}
+Let $v: (B_n)_{n \in \mathcal{N}(t)} \rightarrow V$ be an injective mapping
+between blockage events and servers, such that $v(B_i) \in V$ represents the
+server associated with blockage event $B_i$.
+\end{definition}
+
+Note that $v(\cdot)$ is injective as each blockage event must be associated with
+a server, and each server can only be with one customer at a time, and so can
+only be associated with one blockage event at a time.
+$v(\cdot)$ is not surjective, as not all servers necessarily have to contain
+blocked customers.
+
+Let's consider how the system evolves over time $t$.
+Both the set of active blockages $\mathcal{N}(t)$ and the sequence
+$(B_n)_{n \in \mathcal{N}(t)}$ evolve with $t$.
+Let's also introduce $M(t)$, the total number of blockages that have occurred so
+far in the simulation run.
+Then with each blockage and each unblockage the system state is updated
+simultaneously by:
+
+\begin{itemize}
+  \item When a customer at server $v^{\star}$ is blocked to node $i$ with
+  servers $V_i = \{v_j \in V \; | \; v_j \text{ is a server of node } i\}$:
+    \begin{itemize}
+      \item The total blockage counter $M(t)$ increments by $1$,
+      \item The active blockage set $\mathcal{N}(t)$ expands to
+      $\mathcal{N}(t) \cup \{M(t) + 1\}$,
+      \item Create $B_{M(t) + 1}$ such that $v(B_{M(t) + 1}) = v^{\star}$,
+      \item The set of edges of the state digraph $E(t)$ includes the new
+      blockage relationships to become
+      $E(t) \cup \{(v^{\star}, v_j) \; | \; v_j \in V_i\}$.
+    \end{itemize}
+  \item When the blockage event $B_k$ becomes unblocked:
+    \begin{itemize}
+      \item the index leaves the active blockage set $\mathcal{N}(t)$ to
+      become $\mathcal{N}(t) \setminus \{k\}$,
+      \item The associated edges are removed from the state digraph, so
+      $E(t)$ becomes $E(t) \setminus \{(v(B_k), v_j) \; | \; v_j \in V\}$.
+    \end{itemize}
+\end{itemize}
+
+Table~\ref{tbl:blockage_sequence} shows how a sequence of blockages and
+unblockages can lead to the deadlock seen in Figure~\ref{fig:exampledigraph},
+and how $(B_n)_{n\in\mathcal{N}(t)}$, $\mathcal{N}(t)$, $M(t)$, and $D(t)$
+evolve at each step.
+In this example there are three nodes: Node A with one server $A_1$, Node B with
+two servers $B_1$ and $B_2$, and Node C with two servers $C_1$ and $C_2$.
+
+\begin{table}
+\begin{center}
+\begin{tabular}{m{0.38\textwidth} m{0.08\textwidth} m{0.1\textwidth} m{0.14\textwidth} m{0.13\textwidth} }
+\toprule
+\vspace{0.5mm}\large{Event}\vspace{0.5mm} & \vspace{0.5mm}\large{$M(t)$}\vspace{0.5mm} & \vspace{0.5mm}\large{$\mathcal{N}(t)$}\vspace{0.5mm} & \vspace{0.5mm}\large{$(B_n)_{n\in\mathcal{N}(t)}$}\vspace{0.5mm} & \vspace{0.5mm}\large{$D(t)$}\vspace{0.5mm} \\
+\midrule
+Customer at $B_2$ is blocked to Node B & 1 & $\{1\}$          & $B_1$                & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/digraph_step1} \\ \midrule
+Customer at $A_1$ is blocked to Node B & 2 & $\{1, 2\}$       & $B_1, B_2$           & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/digraph_step2} \\ \midrule
+Customer at $C_2$ is blocked to Node C & 3 & $\{1, 2, 3\}$    & $B_1, B_2, B_3$      & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/digraph_step3} \\ \midrule
+Customer at $C_1$ is blocked to Node B & 4 & $\{1, 2, 3, 4\}$ & $B_1, B_2, B_3, B_4$ & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/digraph_step4} \\ \midrule
+Customer at $B_2$ is unblocked         & 4 & $\{2, 3, 4\}$    & $B_2, B_3, B_4$      & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/digraph_step5} \\ \midrule
+Customer at $B_1$ is blocked to Node A & 5 & $\{2, 3, 4, 5\}$ & $B_2, B_3, B_4, B_5$ & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/digraph_step6} \\ \midrule
+Customer at $C_2$ is unblocked         & 5 & $\{2, 4, 5\}$    & $B_2, B_4, B_5$      & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/digraph_step7} \\ \midrule
+Customer at $B_2$ is blocked to Node B & 6 & $\{2, 4, 5, 6\}$ & $B_2, B_4, B_5, B_6$ & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/digraph_step8} \\
+\bottomrule
+\end{tabular}
+\caption{An example sequence of blockages and unblockages.}
+\label{tbl:blockage_sequence}
+\end{center}
+\end{table}
+
+An unblockage can itself trigger further unblockages, for example if there
+exists a set of blockages $\{B_i, B_j, ...\}$ which are all blocked by $v(B_k)$,
+then unblocking $B_k$ will allow one of $\{B_i, B_j, ...\}$ to become unblocked.
+This choice is governed by two conditions given in
+Remark~\ref{rmk:unblocking_sequence}.
+
+\begin{remark}\label{rmk:unblocking_sequence}
+Unblocking $B_k$ will also trigger the unblocking of $B_h$ if:
+\begin{enumerate}
+  \item \label{pnt:necessity} $(v(B_h), v(B_k)) \in E(t)$, that is that the edge
+  between the server associated with $B_h$ and the server associated with $B_k$
+  in the state digraph; or in other words, that $B_h$ is blocked by $B_k$; and
+  \item \label{pnt:choice}
+  $h = \min(i \in \mathcal{N}(t) \; | \; (v(B_i), v(B_k)) \in E(t))$, that is
+  out of all the active blockages caused by $B_k$, $B_h$ was the first to become
+  blocked.
+\end{enumerate}
+\end{remark}
+
+Note that condition~\ref{pnt:necessity} is a necessity, an unblockage can only
+occur when there is spare capacity at the destination node, which is triggered
+by the original unblockage.
+Condition~\ref{pnt:choice} meanwhile is a choice: it would be natural in a FIFO
+service discipline that those customers who have waited longest should be
+unblocked first, retaining the eventual queueing order at the destination node;
+though in other service disciplines other selection criteria may be more
+appropriate.
+As an example, Figure~\ref{fig:example_unblockages} shows a system with a
+sequence of blockages, and Table~\ref{tbl:unblockage_sequence} shows the
+sequence of unblockages that would occur \textit{instantaneously} when server
+$B_1$ releases their customer and frees capacity at Node B.
+
+\begin{figure}
+\begin{center}
+\includestandalone[width=0.675\textwidth]{../images/example_unblockages}
+\end{center}
+\caption{Example of a sequence of blockages and corresponding state digraph
+$D(t)$, for which Table~\ref{tbl:unblockage_sequence} shows the sequence of
+unblockages when the customer at server $B_2$ exits the system.}
+\label{fig:example_unblockages}
+\end{figure}
+
+\begin{table}
+\begin{center}
+\begin{tabular}{m{0.38\textwidth} m{0.08\textwidth} m{0.1\textwidth} m{0.14\textwidth} m{0.13\textwidth} }
+\toprule
+\vspace{0.5mm}\large{Event}\vspace{0.5mm} & \vspace{0.5mm}\large{$M(t)$}\vspace{0.5mm} & \vspace{0.5mm}\large{$\mathcal{N}(t)$}\vspace{0.5mm} & \vspace{0.5mm}\large{$(B_n)_{n\in\mathcal{N}(t)}$}\vspace{0.5mm} & \vspace{0.5mm}\large{$D(t)$}\vspace{0.5mm} \\
+\midrule
+Customer at $B_1$ is released            & 4 & $\{1, 2, 3, 4\}$ & $B_1, B_2, B_3, B_4$ & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/unblock_step1} \\ \midrule
+Customer at $C_1$ is unblocked to Node B & 4 & $\{1, 2, 4\}$    & $B_1, B_2, B_4$      & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/unblock_step2} \\ \midrule
+Customer at $B_2$ is unblocked to Node C & 4 & $\{2, 4\}$       & $B_2, B_4$           & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/unblock_step3} \\ \midrule
+Customer at $A_1$ is unblocked to Node B & 4 & $\{2\}$          & $B_2$                & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/unblock_step4} \\
+\bottomrule
+\end{tabular}
+\caption{An example sequence of blockages and unblockages.}
+\label{tbl:unblockage_sequence}
+\end{center}
+\end{table}
+
+\section{Deadlock Resolution}\label{sec:resolution}
+\section{Markov Models of Deadlock Resolution}\label{sec:markov}
+
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\end{document}
