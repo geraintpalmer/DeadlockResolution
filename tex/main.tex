@@ -191,7 +191,7 @@ Customer at $C_2$ is unblocked         & 5 & $\{2, 4, 5\}$    & $B_2, B_4, B_5$ 
 Customer at $B_2$ is blocked to Node B & 6 & $\{2, 4, 5, 6\}$ & $B_2, B_4, B_5, B_6$ & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/digraph_step8} \\
 \bottomrule
 \end{tabular}
-\caption{An example sequence of blockages and unblockages.}
+\caption{An example sequence of blockages with unblockages.}
 \label{tbl:blockage_sequence}
 \end{center}
 \end{table}
@@ -227,6 +227,16 @@ As an example, Figure~\ref{fig:example_unblockages} shows a system with a
 sequence of blockages, and Table~\ref{tbl:unblockage_sequence} shows the
 sequence of unblockages that would occur \textit{instantaneously} when server
 $B_1$ releases their customer and frees capacity at Node B.
+This sequence of cascading unblockages eventually unblocks servers $C_1$, $B_2$
+and $A_1$, while server $C_2$ remains blocked.
+
+To illustrate the arbitrariness of condition~\ref{pnt:choice} above, consider
+the case where server $A_1$ was the first to get blocked.
+Once server $B_1$ releases their customer and creates capacity at Node B, $A_1$
+is unblocked, but as there are no other blockages caused by $A_1$,
+condition~\ref{pnt:necessity} is not satisfied, and so there are no more
+unblockages.
+Hence servers $B_2$, $C_1$ and $C_2$ all remain blocked.
 
 \begin{figure}
 \begin{center}
@@ -250,12 +260,79 @@ Customer at $B_2$ is unblocked to Node C & 4 & $\{2, 4\}$       & $B_2, B_4$    
 Customer at $A_1$ is unblocked to Node B & 4 & $\{2\}$          & $B_2$                & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/unblock_step4} \\
 \bottomrule
 \end{tabular}
-\caption{An example sequence of blockages and unblockages.}
+\caption{An example sequence of cascading unblockages.}
 \label{tbl:unblockage_sequence}
 \end{center}
 \end{table}
 
+\begin{tcolorbox}[colback=orange!5!white,colframe=orange!75!black,title=TODO]
+Show that this is the true protocol for Ciw and SIMUL8. Do this (in an Appendix)
+by designing a deterministic system where the sequence of unblockages does
+indeed change macro behaviour: show we get the same results in Ciw as we do in
+SIMUL8.
+\end{tcolorbox}
+
 \section{Deadlock Resolution}\label{sec:resolution}
+
+\subsection{Induced Sequence of Unblockages}
+For a cascading sequence of unblockages, which `untangles' the blockages built
+up over time, to occur, it is necessary for the customer at the head of the
+sequence to be blocked by servers who have the potential to create capacity at
+their node.
+That is, blocked by servers that are themselves are not blocked, or that the
+system is not deadlocked.
+
+We introduce the idea of artificially \textit{inducing} a sequence of
+unblockages by creating dummy capacity, triggering a cascading sequence of
+unblockages.
+The aim is that this will clear the deadlocked state seamlessly, that is without
+breaking the queueing capacity of Type 1 blocking rules for any meaningful
+duration of simulation time.
+
+\begin{definition}
+At deadlock, a sequence of unblockages is \textsc{induced} by temporarily
+creating extra capacity for one customer at one of the nodes.
+
+The induced sequence of unblockages is \textsc{feasible} if by the end of the
+sequence that extra capacity is not in use, and can therefore be removed.
+\end{definition}
+
+As sequences of unblockages happen instantaneously with respect to simulation
+time, a feasible induced sequence of unblockages will not cause any customer to
+experience any non-zero duration of time at the dummy capacity, and the nodes
+themselves will not experience any non-zero duration of time with extra
+capacity.
+Therefore this feasible induced sequence of unblockages plays no role in the
+modelled system, and is purely a simulation mechanic that stands as a proxy for
+mutual communication between deadlocked service centres.
+
+\begin{remark}\label{rmk:not_all_feasible}
+Not all induced subsequences are feasible under the conditions set out in
+Remark~\ref{rmk:unblocking_sequence}.
+\end{remark}
+
+The claim in Remark~\ref{rmk:not_all_feasible} can be shown with a simple
+counter-example: consider the three node queueing network in deadlock given in
+Figure~\ref{fig:counter_example}, and consider inducing a sequence of
+unblockages by adding dummy capacity to Node A.
+Then customer at $B_1$ will become unblocked, filling the dummy capacity and
+leaving capacity at Node B; which in turn unblocks the customer at $C_1$,
+filling the capacity at Node B and leaving capacity at Node C.
+However no customer was originally blocked by $C_1$, and so no more unblockages
+can occur, and the dummy capacity introduced at Node A is still used.
+Hence this is not a feasible induced sequence of unblockages.
+
+\begin{figure}
+\begin{center}
+\includestandalone[width=0.75\textwidth]{../images/counter_example}
+\end{center}
+\caption{Example of a deadlock where the induced sequence of unblockages by
+adding dummy capacity at Node A would not be feasible under the conditions set
+out in Remark~\ref{rmk:unblocking_sequence}.}
+\label{fig:counter_example}
+\end{figure}
+
+
 \section{Markov Models of Deadlock Resolution}\label{sec:markov}
 
 \bibliographystyle{plain}
