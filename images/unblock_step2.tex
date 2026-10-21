@@ -14,10 +14,10 @@
   \node (C2) [style={minimum size=2.5cm,draw=black,fill=black!10!white,text=black,shape=circle}] at (1.545, -4.755) {\huge $C_2$};
 
   \draw[ultra thick, -triangle 90] (A1) -- (B1);
-  \draw[ultra thick, -triangle 90] (A1) -- (B2);
+  \draw[ultra thick, -triangle 90] (A1) [bend left=15] to (B2);
   \draw[ultra thick, -triangle 90] (C2) -- (C1);
   \draw[ultra thick, -triangle 90] (C2) [out=-55, in=-125, looseness=3] to (C2);
-  \draw[ultra thick, -triangle 90] (B2) -- (A1);
+  \draw[ultra thick, -triangle 90] (B2) [bend left=15] to (A1);
 
 \end{tikzpicture}
 

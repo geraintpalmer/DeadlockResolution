@@ -58,52 +58,39 @@
 \node[align=center] [style={minimum size=1.4cm, text width=1.0cm, draw=black,fill=black!10,text=black,shape=circle}] at (6.6, 3) {};
 \node[align=center] [style={minimum size=1.4cm, text width=1.0cm, draw=black,fill=black!10,text=black,shape=circle}] at (8.4, 3) {};
 
-% State digraph Nodes
-\node (A1) [style={minimum size=2.5cm,draw=black,fill=black!3,text=black,shape=circle}] at (27.5, 10) {\huge{$A_1$}};
-\node (B1) [style={minimum size=2.5cm,draw=black,fill=black!3,text=black,shape=circle}] at (24.045, 14.755) {\huge{$B_1$}};
-\node (B2) [style={minimum size=2.5cm,draw=black,fill=black!3,text=black,shape=circle}] at (18.455, 12.939) {\huge{$B_2$}};
-\node (C1) [style={minimum size=2.5cm,draw=black,fill=black!3,text=black,shape=circle}] at (18.455, 7.061) {\huge{$C_1$}};
-\node (C2) [style={minimum size=2.5cm,draw=black,fill=black!3,text=black,shape=circle}] at (24.045, 5.245) {\huge{$C_2$}};
+% Alt State digraph Nodes
+\node (A) [style={minimum size=2.5cm,draw=black,fill=black!3,text=black,shape=circle}] at (18.5, 13.5) {\huge{$A$}};
+\node (B) [style={minimum size=2.5cm,draw=black,fill=black!3,text=black,shape=circle}] at (25.5, 13.5) {\huge{$B$}};
+\node (C) [style={minimum size=2.5cm,draw=black,fill=black!3,text=black,shape=circle}] at (22, 7) {\huge{$C$}};
 
 % B1 to A
 \node[align=center] [style={minimum size=1.4cm, text width=1.0cm, draw=black,fill=black!25,text=black,shape=circle}] at (3.9, 9.9) {\huge $B_1$};
-\draw[ultra thick, -triangle 90] (B1) -- (A1);
-\draw[ultra thick, black, dashed, ->] (3.2, 9.9) [bend left=45] to (3.5, 14.4);
 \node at (3, 12.15) {\LARGE $1^{st}$};
+\draw[ultra thick, dotted, -triangle 90] (A) [bend left=20] to (B);
+\draw[ultra thick, black, dashed, ->] (3.2, 9.9) [bend left=45] to (3.5, 14.4);
+\node at (22, 14.1) {\Large $1^{st}$};
 
 % B2 to A
 \node[align=center] [style={minimum size=1.4cm, text width=1.0cm, draw=black,fill=black!25,text=black,shape=circle}] at (3.9, 8.1) {\huge $B_2$};
-\draw[ultra thick, -triangle 90] (B2) -- (A1);
-\draw[ultra thick, black, dashed, ->] (3.2, 8.1) [bend left=45] to (3.2, 14.6);
 \node at (1.25, 11.35) {\LARGE $4^{th}$};
+\draw[ultra thick, -triangle 90] (A) [out=45, in=135] to (B);
+\draw[ultra thick, black, dashed, ->] (3.2, 8.1) [bend left=45] to (3.2, 14.6);
+\node at (22, 15.2) {\Large $4^{th}$};
 
 
 % C1 to B
 \node[align=center] [style={minimum size=1.4cm, text width=1.0cm, draw=black,fill=black!25,text=black,shape=circle}] at (10.2, 3.9) {\huge $C_1$};
-\draw[ultra thick, -triangle 90] (C1) -- (B1);
-\draw[ultra thick, -triangle 90] (C1) -- (B2);
-\draw[ultra thick, black, dashed, ->] (10.9, 3.8) [bend right=45] to (12.7, 8.5);
 \node at (12.25, 6.15) {\LARGE $2^{nd}$};
+\draw[ultra thick, dotted, -triangle 90] (B) -- (C);
+\draw[ultra thick, black, dashed, ->] (10.9, 3.8) [bend right=45] to (12.7, 8.5);
+\node at (24.25, 10.25) {\Large $2^{nd}$};
 
 % A1 to B
 \node[align=center] [style={minimum size=1.4cm, text width=1.0cm, draw=black,fill=black!25,text=black,shape=circle}] at (10.2, 15) {\huge $A_1$};
-\draw[ultra thick, -triangle 90] (A1) -- (B1);
-\draw[ultra thick, -triangle 90] (A1) -- (B2);
-\draw[ultra thick, black, dashed, ->] (10.9, 15) [bend left=45] to (12.7, 9.5);
 \node at (12.25, 12.25) {\LARGE $3^{rd}$};
-
-% Lasso highlighting the knot (B1, B2, A1)
-\draw[
-    thick, 
-    dashed, 
-    gray!70!black, 
-    fill=gray!15, 
-    fill opacity=0.4
-] plot [smooth cycle, tension=1] coordinates {
-    ($(B2) + (-2,  -0.5)$)
-    ($(B1) + (0,  2)$)
-    ($(A1) + ( 1.5,  -1.5)$)
-};
+\draw[ultra thick, -triangle 90] (B) [bend left=15] to (A);
+\draw[ultra thick, black, dashed, ->] (10.9, 15) [bend left=45] to (12.7, 9.5);
+\node at (22, 12.5) {\Large $3^{rd}$};
 
 \end{tikzpicture}
 

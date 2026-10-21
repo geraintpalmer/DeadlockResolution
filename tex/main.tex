@@ -34,6 +34,8 @@
 
 \newtheorem{definition}{Definition}
 \newtheorem{remark}{Remark}
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
 
 \title{\bf Modelling Deadlock Resolution in Open Restricted Queueing Networks}
 \author{Geraint I. Palmer-Liyu}
@@ -42,23 +44,24 @@
 \maketitle
 
 \section{Introduction}\label{sec:introduction}
-
-\section{Preliminaries and System Model}\label{sec:recap}
-This work builds directly on the work of \cite{palmer2018modelling}, which
-considered deadlock detection in discrete event simulations (DES) of open
-restricted queueing networks, and analysed Markovian models of deadlocking
-queueing system.
 The simulation software used is the Ciw library in Python \cite{palmer2019ciw},
 although the methodology is appropriate for general DES.
-We are concerned with open restricted queueing networks that experience Type I
-blocking.
+
+
+\section{Preliminaries and System Model}\label{sec:recap}
+This work builds directly on the work of \cite{palmer2018}, which considered
+deadlock detection in discrete event simulations (DES) of open restricted
+queueing networks, and analysed Markovian models of deadlocking queueing system.
+This section summarises the findings of that work, defining concepts and
+notation and results as needed.
+
 Queueing networks are described as open if customers can enter and leave the 
 system from the exterior, while restricted networks contain at least one service
 centre with limited queueing space or capacity before it, turning away
 externally arriving customers when full, and inducing blocking for internally
 routed customers when full.
 
-This paper considers Type I blocking only \cite{onvural1986equivalencies}: once
+This works considers Type I blocking only \cite{onvural1986equivalencies}: once
 a customer finishes their service and wishes to join another node's queue, they
 are blocked from joining that queue if it is full; while blocked that customer
 remains with its server until capacity becomes available at its destination;
@@ -71,16 +74,35 @@ with the servers of node 2.
 \textit{Deadlock occurs when a subset of blocked customers are blocked by
 customers in that subset only.}
 
-In \cite{palmer2018modelling} a graph theoretic approach to detecting deadlock
-during a simulation run is given:
-Let $D(t) = (V, E(t))$ be the state digraph of a queueing system, with set of
-vertices $V$ corresponding to the servers of all service centres, and a set of
-directed edges $E(t)$ representing blockage relationships: if a customer at the
-$k$th server of node $i$ is blocked from entering node $j$, then there are
-directed edges from the vertex corresponding to node $i$'s $k$th server to every
-vertex corresponding to the servers of node $j$.
-Then it is shown that \textit{deadlock occurs at time $t$ if and only if $D(t)$
-contains a knot}, that is a strongly connected component with no sink.
+In \cite{palmer2018} a graph theoretic approach to detecting deadlock during a
+simulation run is given:
+
+\begin{definition}\label{def:statedigraph}
+Let $\tilde{D}(t) = (\tilde{V}, \tilde{E}(t))$ be the state digraph of a
+queueing system, with set of vertices $\tilde{V}$ corresponding to the servers
+of all service centres, and a set of directed edges $\tilde{E}(t)$ representing
+blockage relationships such that if a customer at the $k$th server of node $i$
+is blocked from entering node $j$, then there are directed edges from the vertex
+corresponding to node $i$'s $k$th server to every vertex corresponding to the
+servers of node $j$.
+\end{definition}
+
+Note that the vertex set $\tilde{V}$ can be partitioned into sets of servers
+all sharing the same node, such that
+$\tilde{V} = \tilde{V}_1 \cup \tilde{V}_2 \cup \dots \cup \tilde{V}_m$, where
+$\tilde{V}_i$ contains all servers at node $i$.
+Therefore $\tilde{V} = \{\tilde{V}_1, \tilde{V}_2, \dots \tilde{V}_m\}$.
+
+Then the following theorem is proved: 
+
+\begin{theorem}[Palmer et al., 2018 \cite{palmer2018}]
+A deadlocked state arises at time $t$ if and only if $\tilde{D}(t)$ contains a
+knot.
+\end{theorem}
+
+A knot here is a strongly connected component with no sink or out-edges.
+Denote $\tilde{K}(t) \subseteq \tilde{D}(t)$ the subgraph that represents this
+knot, that is the subgraph induced by the set of vertices involved in the knot.
 Figure~\ref{fig:exampledigraph} shows an example of a three node queueing
 network in deadlock with the corresponding state digraph.
 
@@ -89,22 +111,137 @@ network in deadlock with the corresponding state digraph.
 \includestandalone[width=0.75\textwidth]{../images/example_digraph}
 \end{center}
 \caption{Example of a three node network in deadlock, and the state digraph
-$D(t)$ that describes the blocking relationships. Customers with servers $A_1$,
-$B_2$ and $C_1$ are blocked to node $B$, while the customer with server $B_1$ is
-blocked to node $A$. The knot within $D(t)$ is highlighted - note that server
+$\tilde{D}(t)$ that describes the blocking relationships.
+Customers with servers $A_1$, $B_2$ and $C_1$ are blocked to node $B$, while the
+customer with server $B_1$ is blocked to node $A$.
+The knot $\tilde{K}(t)$ within $\tilde{D}(t)$ is highlighted - note that server
 $C_1$ is not part of the knot, as no deadlocked customer is waiting for this
 server to be free.}
 \label{fig:exampledigraph}
 \end{figure}
 
-This paper builds on this graph theoretic foundation to consider deadlock
-resolutions with no perceptible disruption to the customers' or the servers'
-experiences.
-First let's consider the unblocking behaviours, that is the cascading sequence
-of servers freeing customers and capacity freeing up that occurs when a customer
-blocking other customers is able to free a server.
-By understanding this behaviour we then design an deadlock resolution method in
-Section~\ref{sec:resolution}.
+Note a difference in notation in this paper compared to \cite{palmer2018}, where
+we use $\tilde{D}$, $\tilde{V}$, $\tilde{E}$ and $\tilde{K}$ to denoted the
+graphs and sets described in that paper.
+Corresponding variables without tildes will describe new yet related
+constructions in this paper.
+
+
+\section{A New Construction}\label{sec:newconstruction}
+Here we define a new analogous construction to $\tilde{D}(t)$:
+
+\begin{definition}\label{def:altstatedigraph}
+Let $D(t) = (V, E(t))$ be an alternative state digraph, where $V$ represents the
+set of \textit{nodes} of the queueing network, and $E(t)$ represents blocked
+customers such that $(u_i, u_j) \in E(t)$ if a customer at node $u_j$ is blocked
+to node $u_i$.
+\end{definition}
+
+Another way to achieve this construction is to apply a transformation $\Phi$,
+defined by vertex contraction and edge reversal: vertices of $\tilde{V}$ in the
+same partition $\tilde{V}_i$ contract, and edges reverse and combine such that:
+
+\begin{itemize}
+  \item if $(v_i, v_j), (v_i, v_k) \in \tilde{E}(t)$ and $v_j$ and $v_k$
+  contract to a new vertex $v$, then there exists the edge $(v, v_i)$ in $E(t)$,
+  \item if $(v_j, v_i), (v_k, v_i) \in \tilde{E}(t)$, and $v_j$ and $v_k$
+  contract to a new vertex $v$, then there exist \textit{two} instances of the
+  edge $(v_i, v)$ in $E(t)$.
+\end{itemize}
+
+\begin{lemma}
+Let $\tilde{D}(t)$ be the state digraph of a queueing network as described in
+Definition~\ref{def:statedigraph}, and $D(t)$ be the alternative state digraph
+of the same queueing network as described in
+Definition~\ref{def:altstatedigraph}.
+Then $D(t) \equiv \Phi(\tilde{D})(t)$.
+\end{lemma}
+
+\begin{proof}
+We demonstrate that the definition of $D(t)$ aligns precisely with the
+operations of $\Phi$ applied to $\tilde{D}(t)$ by showing that their vertex sets
+and edge sets correspond:
+
+\begin{itemize}
+  \item \textit{Vertices} ($V \equiv \Phi(\tilde{V})$):
+  Elements of $V$ corresponds to the nodes of the queueing network.
+  Elements of $\tilde{V}$ correspond to servers of the network, and applying
+  $\Phi$ contracts all servers at the same node, hence $\Phi(\tilde{V})$ also
+  correspond to nodes of the queueing network.
+  \item \textit{Edges} ($E \equiv \Phi(\tilde{E})$):
+  An edge $(v, u) \in E$ corresponds to a customer at node $u$ being blocked to
+  node $v$.
+  An edge $(u, v) \in \tilde{E}$ corresponds to a customer at server $u$ being blocked by server $v$, and applying $\Phi$:
+  \begin{itemize}
+  	\item contracts edges originating from the same vertex and terminating at
+  	contracted vertices: these original edges corresponded to the same blocked
+  	customer being blocked by multiple servers at the same node, and so this
+  	contracted edge corresponds to a single unique blocked customer;
+  	\item does not contract edges originating from contracted vertices and
+  	terminating at the same vertex: these original edges corresponded to two
+  	different customers being blocked by the same server;
+  	\item reverses the direction of all edges after contraction, which does not
+  	alter edge counts or their interpretation;
+  \end{itemize}
+  hence edges in $\Phi(\tilde{E})$ correspond to each blocked customer,
+  originating from the vertex corresponding from the node to which they are
+  blocked to, and terminating at the node they are currently at.
+\end{itemize}
+
+As $V \equiv \Phi(\tilde{V})$ and $E \equiv \Phi(\tilde{E})$, then
+$D(t) \equiv \Phi(\tilde{D})(t)$.
+\end{proof}
+
+For notational simplicity, we omit the time index $(t)$ from now on.
+Figure~\ref{fig:transformation_example} shows an example of applying $\Phi$ to
+an instance of $\tilde{D}$ to obtain the alternative state digraph $D$.
+Note in particular the reversal of the edges as they contract.
+
+\begin{figure}
+\begin{center}
+\includestandalone[width=0.7\textwidth]{../images/transform}
+\end{center}
+\caption{Example of the transformation $\Phi$ on the same state digraph as shown
+in Figure~\ref{fig:exampledigraph}.}
+\label{fig:transformation_example}
+\end{figure}
+
+\begin{theorem}
+If $\tilde{K} \subseteq \tilde{D}$ is a subgraph induced by the knot in
+$\tilde{D}$, then $K = \Phi(\tilde{K})$ is also strongly connected.
+\end{theorem}
+
+\begin{proof}
+The mapping $\Phi(\tilde{K})$ is a transformation consisting of applying vertex
+contraction and edge reversal to the strongly connected graph $\tilde{K}$.
+
+\begin{enumerate}
+    \item Vertex Contraction: Contracting the vertices of a strongly connected
+    digraph preserves strong connectivity, as reachability between any pair of
+    vertices is maintained.
+    \item Edge Reversal: Reversing all edges in a digraph preserves strong
+    connectivity, as every directed path $u$ to $v$ in $K$ becomes a valid path
+    $v$ to $u$ in $\Phi(\tilde{K})$.
+\end{enumerate}
+
+Therefore, $K = \Phi(\tilde{K})$ is strongly connected.
+\end{proof}
+
+It will also be useful to define one more subgraph:
+
+\begin{definition}\label{def:Hu}
+At deadlock, let $H_u = (V_{H_u}, E_{H_u})$, where $H_u \subseteq K = \Phi(K)$,
+be some Eulerian subgraph of the transformed knot $\tilde{K} \subseteq \tilde{D}$
+that contains the vertex $u \in V_{H_u}$.
+\end{definition}
+
+As $H_u$ is Eulerian, then:
+\begin{itemize}
+  \item $\text{deg}_{\text{in}}(v) = \text{deg}_{\text{out}}(v)$ for all
+  $v \in V_{H_u}$, and
+  \item there exists an Eulerian circuit in $H_u$, that is a cycle that
+  traverses each edge once and only once.
+\end{itemize}
 
 
 \section{Sequences of Unblockages}\label{sec:unblockages}
@@ -128,16 +265,18 @@ set of all servers, therefore there is a mapping between blockage events and
 servers:
 
 \begin{definition}
-Let $v: (B_n)_{n \in \mathcal{N}(t)} \rightarrow V$ be an injective mapping
-between blockage events and servers, such that $v(B_i) \in V$ represents the
-server associated with blockage event $B_i$.
+Let:
+\begin{itemize}
+  \item $\nu_{\text{at}}: (B_n)_{n \in \mathcal{N}(t)} \rightarrow V$ be a
+  mapping between blockage events and nodes, such that
+  $\nu_{\text{at}}(B_i) \in V$ represents the node where the customer is
+  currently blocked.
+  \item $\nu_{\text{to}}: (B_n)_{n \in \mathcal{N}(t)} \rightarrow V$ be a
+  mapping between blockage events and nodes, such that
+  $\nu_{\text{to}}(B_i) \in V$ represents the node where the customer is blocked
+  to.
+\end{itemize}
 \end{definition}
-
-Note that $v(\cdot)$ is injective as each blockage event must be associated with
-a server, and each server can only be with one customer at a time, and so can
-only be associated with one blockage event at a time.
-$v(\cdot)$ is not surjective, as not all servers necessarily have to contain
-blocked customers.
 
 Let's consider how the system evolves over time $t$.
 Both the set of active blockages $\mathcal{N}(t)$ and the sequence
@@ -148,47 +287,46 @@ Then with each blockage and each unblockage the system state is updated
 simultaneously by:
 
 \begin{itemize}
-  \item When a customer at server $v^{\star}$ is blocked to node $i$ with
-  servers $V_i = \{v_j \in V \; | \; v_j \text{ is a server of node } i\}$:
+  \item When a customer at node $u$ is blocked to node $v$:
     \begin{itemize}
       \item The total blockage counter $M(t)$ increments by $1$,
       \item The active blockage set $\mathcal{N}(t)$ expands to
       $\mathcal{N}(t) \cup \{M(t) + 1\}$,
-      \item Create $B_{M(t) + 1}$ such that $v(B_{M(t) + 1}) = v^{\star}$,
-      \item The set of edges of the state digraph $E(t)$ includes the new
-      blockage relationships to become
-      $E(t) \cup \{(v^{\star}, v_j) \; | \; v_j \in V_i\}$.
+      \item Create $B_{M(t) + 1}$ such that $\nu_{\text{at}}(B_{M(t) + 1}) = u$
+      and $\nu_{\text{to}}(B_{M(t) + 1}) = v$,
+      \item The set of edges of the alternative state digraph $D(t)$ includes
+      the new blockage relationship, so $E(t)$ becomes $E(t) \cup \{(v, u)\}$.
     \end{itemize}
   \item When the blockage event $B_k$ becomes unblocked:
     \begin{itemize}
       \item the index leaves the active blockage set $\mathcal{N}(t)$ to
       become $\mathcal{N}(t) \setminus \{k\}$,
-      \item The associated edges are removed from the state digraph, so
-      $E(t)$ becomes $E(t) \setminus \{(v(B_k), v_j) \; | \; v_j \in V\}$.
+      \item The associated edge is removed from the $D(t)$, so $E(t)$ becomes
+      $E(t) \setminus \{(v, u)\}$.
     \end{itemize}
 \end{itemize}
 
 Table~\ref{tbl:blockage_sequence} shows how a sequence of blockages and
 unblockages can lead to the deadlock seen in Figure~\ref{fig:exampledigraph},
-and how $(B_n)_{n\in\mathcal{N}(t)}$, $\mathcal{N}(t)$, $M(t)$, and $D(t)$
-evolve at each step.
+and how $(B_n)_{n\in\mathcal{N}(t)}$, $\mathcal{N}(t)$, $M(t)$, $\tilde{D}(t)$
+and $D(t)$ evolve at each step.
 In this example there are three nodes: Node A with one server $A_1$, Node B with
 two servers $B_1$ and $B_2$, and Node C with two servers $C_1$ and $C_2$.
 
 \begin{table}
 \begin{center}
-\begin{tabular}{m{0.38\textwidth} m{0.08\textwidth} m{0.1\textwidth} m{0.14\textwidth} m{0.13\textwidth} }
+\begin{tabular}{m{0.36\textwidth} m{0.06\textwidth} m{0.1\textwidth} m{0.14\textwidth} m{0.115\textwidth} m{0.115\textwidth}}
 \toprule
-\vspace{0.5mm}\large{Event}\vspace{0.5mm} & \vspace{0.5mm}\large{$M(t)$}\vspace{0.5mm} & \vspace{0.5mm}\large{$\mathcal{N}(t)$}\vspace{0.5mm} & \vspace{0.5mm}\large{$(B_n)_{n\in\mathcal{N}(t)}$}\vspace{0.5mm} & \vspace{0.5mm}\large{$D(t)$}\vspace{0.5mm} \\
+\vspace{0.5mm}\large{Event}\vspace{0.5mm} & \vspace{0.5mm}\large{$M(t)$}\vspace{0.5mm} & \vspace{0.5mm}\large{$\mathcal{N}(t)$}\vspace{0.5mm} & \vspace{0.5mm}\large{$(B_n)_{n\in\mathcal{N}(t)}$}\vspace{0.5mm} & \vspace{0.5mm}\large{$\tilde{D}(t)$}\vspace{0.5mm} & \vspace{0.5mm}\large{$D(t)$}\vspace{0.5mm} \\
 \midrule
-Customer at $B_2$ is blocked to Node B & 1 & $\{1\}$          & $B_1$                & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/digraph_step1} \\ \midrule
-Customer at $A_1$ is blocked to Node B & 2 & $\{1, 2\}$       & $B_1, B_2$           & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/digraph_step2} \\ \midrule
-Customer at $C_2$ is blocked to Node C & 3 & $\{1, 2, 3\}$    & $B_1, B_2, B_3$      & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/digraph_step3} \\ \midrule
-Customer at $C_1$ is blocked to Node B & 4 & $\{1, 2, 3, 4\}$ & $B_1, B_2, B_3, B_4$ & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/digraph_step4} \\ \midrule
-Customer at $B_2$ is unblocked         & 4 & $\{2, 3, 4\}$    & $B_2, B_3, B_4$      & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/digraph_step5} \\ \midrule
-Customer at $B_1$ is blocked to Node A & 5 & $\{2, 3, 4, 5\}$ & $B_2, B_3, B_4, B_5$ & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/digraph_step6} \\ \midrule
-Customer at $C_2$ is unblocked         & 5 & $\{2, 4, 5\}$    & $B_2, B_4, B_5$      & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/digraph_step7} \\ \midrule
-Customer at $B_2$ is blocked to Node B & 6 & $\{2, 4, 5, 6\}$ & $B_2, B_4, B_5, B_6$ & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/digraph_step8} \\
+Customer at $B_2$ is blocked to Node B & 1 & $\{1\}$          & $B_1$                & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/digraph_step1} & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/altdigraph_step1} \\ \midrule
+Customer at $A_1$ is blocked to Node B & 2 & $\{1, 2\}$       & $B_1, B_2$           & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/digraph_step2} & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/altdigraph_step2} \\ \midrule
+Customer at $C_2$ is blocked to Node C & 3 & $\{1, 2, 3\}$    & $B_1, B_2, B_3$      & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/digraph_step3} & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/altdigraph_step3} \\ \midrule
+Customer at $C_1$ is blocked to Node B & 4 & $\{1, 2, 3, 4\}$ & $B_1, B_2, B_3, B_4$ & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/digraph_step4} & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/altdigraph_step4} \\ \midrule
+Customer at $B_2$ is unblocked         & 4 & $\{2, 3, 4\}$    & $B_2, B_3, B_4$      & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/digraph_step5} & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/altdigraph_step5} \\ \midrule
+Customer at $B_1$ is blocked to Node A & 5 & $\{2, 3, 4, 5\}$ & $B_2, B_3, B_4, B_5$ & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/digraph_step6} & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/altdigraph_step6} \\ \midrule
+Customer at $C_2$ is unblocked         & 5 & $\{2, 4, 5\}$    & $B_2, B_4, B_5$      & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/digraph_step7} & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/altdigraph_step7} \\ \midrule
+Customer at $B_2$ is blocked to Node B & 6 & $\{2, 4, 5, 6\}$ & $B_2, B_4, B_5, B_6$ & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/digraph_step8} & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/altdigraph_step8} \\
 \bottomrule
 \end{tabular}
 \caption{An example sequence of blockages with unblockages.}
@@ -197,7 +335,8 @@ Customer at $B_2$ is blocked to Node B & 6 & $\{2, 4, 5, 6\}$ & $B_2, B_4, B_5, 
 \end{table}
 
 An unblockage can itself trigger further unblockages, for example if there
-exists a set of blockages $\{B_i, B_j, ...\}$ which are all blocked by $v(B_k)$,
+exists a set of blockages $\{B_i, B_j, ...\}$ are with
+$\nu_{\text{to}}(B_i) = \nu_{\text{to}}(B_j) = \dots = \nu_{\text{at}}(B_k)$,
 then unblocking $B_k$ will allow one of $\{B_i, B_j, ...\}$ to become unblocked.
 This choice is governed by two conditions given in
 Remark~\ref{rmk:unblocking_sequence}.
@@ -205,13 +344,13 @@ Remark~\ref{rmk:unblocking_sequence}.
 \begin{remark}\label{rmk:unblocking_sequence}
 Unblocking $B_k$ will also trigger the unblocking of $B_h$ if:
 \begin{enumerate}
-  \item \label{pnt:necessity} $(v(B_h), v(B_k)) \in E(t)$, that is that the edge
-  between the server associated with $B_h$ and the server associated with $B_k$
-  in the state digraph; or in other words, that $B_h$ is blocked by $B_k$; and
+  \item \label{pnt:necessity}
+  $(\nu_{\text{to}}(B_k), \nu_{\text{at}}(B_h)) \in E(t)$, that is that $B_h$ is
+  blocked by $B_k$; and
   \item \label{pnt:choice}
-  $h = \min(i \in \mathcal{N}(t) \; | \; (v(B_i), v(B_k)) \in E(t))$, that is
-  out of all the active blockages caused by $B_k$, $B_h$ was the first to become
-  blocked.
+  $h = \min(i \in \mathcal{N}(t) \; | \; (\nu_{\text{to}}(B_k), \nu_{\text{at}}(B_h)) \in E(t))$,
+  that is out of all the active blockages caused by $B_k$, $B_h$ was the first
+  to become blocked.
 \end{enumerate}
 \end{remark}
 
@@ -230,6 +369,45 @@ $B_1$ releases their customer and frees capacity at Node B.
 This sequence of cascading unblockages eventually unblocks servers $C_1$, $B_2$
 and $A_1$, while server $C_2$ remains blocked.
 
+Notice how $D(t)$ evolves as the sequence of unblockages unfolds: first $(B, C)$
+is removed, then $(C, B)$, and finally $(B, A)$.
+This forms a path in $D(t)$ beginning at the node $B$ where capacity is first
+introduced by releasing a customer, and ending at an eventual sink.
+This traces how the capacity, introduced by releasing a customer from node $B$,
+is transferred from node to node via the sequence of unblockages.
+Lemma~\ref{thrm:graph_traversal} formalises this.
+
+\begin{lemma}\label{thrm:graph_traversal}
+A sequence of unblockages caused by capacity becoming available at a node
+$v \in V$ corresponds to a path in $D(t)$ starting at $v$ and terminating at a
+vertex with no more unused out-edges.
+\end{lemma}
+
+\begin{proof}
+Let $\mathcal{P}$ be the path.
+
+If capacity becomes available at Node $v \in V$, and there is at least one
+customer blocked to node $v$, then at least once customer blocked to node $v$
+will become unblocked.
+Without loss of generality, let the customer to be unblocked be $B_n$, and
+$\nu_{\text{at}}(B_n) = u$.
+Then $\nu_{\text{to}}(B_n) = v$, and Condition~\ref{pnt:necessity} the edge
+$(v, u)$ exists in $E(t)$.
+
+This unblockage moves a customer from $u$ to $v$, and hence moves capacity from
+$v$ to $u$, corresponding to adding edge $(v, u)$ to $\mathcal{P}$.
+
+If any $(u, w) \in E(t)$ exist, for any $w \in V$, then there is a customer at
+$w$ blocked to $u$ who can now be unblocked, and so this repeats, continuing the
+path.
+
+The sequence of unblockages terminates if there are no customers blocked to $u$,
+and the path terminates at $u$.
+In this case there cannot exist any unused $(u, w) \in E(t)$ for any $w \in V$,
+and so $u$ has no unused out-edges, and $\mathcal{P}$ terminates at a vertex
+with no more unused out-edges.
+\end{proof}
+
 To illustrate the arbitrariness of condition~\ref{pnt:choice} above, consider
 the case where server $A_1$ was the first to get blocked.
 Once server $B_1$ releases their customer and creates capacity at Node B, $A_1$
@@ -240,7 +418,7 @@ Hence servers $B_2$, $C_1$ and $C_2$ all remain blocked.
 
 \begin{figure}
 \begin{center}
-\includestandalone[width=0.675\textwidth]{../images/example_unblockages}
+\includestandalone[width=0.325\textwidth]{../images/example_unblockages}
 \end{center}
 \caption{Example of a sequence of blockages and corresponding state digraph
 $D(t)$, for which Table~\ref{tbl:unblockage_sequence} shows the sequence of
@@ -250,14 +428,14 @@ unblockages when the customer at server $B_2$ exits the system.}
 
 \begin{table}
 \begin{center}
-\begin{tabular}{m{0.38\textwidth} m{0.08\textwidth} m{0.1\textwidth} m{0.14\textwidth} m{0.13\textwidth} }
+\begin{tabular}{m{0.37\textwidth} m{0.05\textwidth} m{0.1\textwidth} m{0.14\textwidth} m{0.115\textwidth} m{0.115\textwidth}}
 \toprule
-\vspace{0.5mm}\large{Event}\vspace{0.5mm} & \vspace{0.5mm}\large{$M(t)$}\vspace{0.5mm} & \vspace{0.5mm}\large{$\mathcal{N}(t)$}\vspace{0.5mm} & \vspace{0.5mm}\large{$(B_n)_{n\in\mathcal{N}(t)}$}\vspace{0.5mm} & \vspace{0.5mm}\large{$D(t)$}\vspace{0.5mm} \\
+\vspace{0.5mm}\large{Event}\vspace{0.5mm} & \vspace{0.5mm}\large{$M(t)$}\vspace{0.5mm} & \vspace{0.5mm}\large{$\mathcal{N}(t)$}\vspace{0.5mm} & \vspace{0.5mm}\large{$(B_n)_{n\in\mathcal{N}(t)}$}\vspace{0.5mm} & \vspace{0.5mm}\large{$\tilde{D}(t)$}\vspace{0.5mm} & \vspace{0.5mm}\large{$D(t)$}\vspace{0.5mm} \\
 \midrule
-Customer at $B_1$ is released            & 4 & $\{1, 2, 3, 4\}$ & $B_1, B_2, B_3, B_4$ & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/unblock_step1} \\ \midrule
-Customer at $C_1$ is unblocked to Node B & 4 & $\{1, 2, 4\}$    & $B_1, B_2, B_4$      & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/unblock_step2} \\ \midrule
-Customer at $B_2$ is unblocked to Node C & 4 & $\{2, 4\}$       & $B_2, B_4$           & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/unblock_step3} \\ \midrule
-Customer at $A_1$ is unblocked to Node B & 4 & $\{2\}$          & $B_2$                & \vspace{1mm}\includestandalone[width=0.12\textwidth]{../images/unblock_step4} \\
+Customer at $B_1$ is released            & 4 & $\{1, 2, 3, 4\}$ & $B_1, B_2, B_3, B_4$ & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/unblock_step1} & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/altunblock_step1} \\ \midrule
+Customer at $C_1$ is unblocked to Node B & 4 & $\{1, 2, 4\}$    & $B_1, B_2, B_4$      & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/unblock_step2} & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/altunblock_step2} \\ \midrule
+Customer at $B_2$ is unblocked to Node C & 4 & $\{2, 4\}$       & $B_2, B_4$           & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/unblock_step3} & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/altunblock_step3} \\ \midrule
+Customer at $A_1$ is unblocked to Node B & 4 & $\{2\}$          & $B_2$                & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/unblock_step4} & \vspace{1mm}\includestandalone[width=0.105\textwidth]{../images/altunblock_step4} \\
 \bottomrule
 \end{tabular}
 \caption{An example sequence of cascading unblockages.}
@@ -281,17 +459,12 @@ sequence to be blocked by servers who have the potential to create capacity at
 their node.
 That is, blocked by servers that are themselves are not blocked, or that the
 system is not deadlocked.
-
-We introduce the idea of artificially \textit{inducing} a sequence of
-unblockages by creating dummy capacity, triggering a cascading sequence of
-unblockages.
-The aim is that this will clear the deadlocked state seamlessly, that is without
-breaking the queueing capacity of Type 1 blocking rules for any meaningful
-duration of simulation time.
+We propose introducing some artificial or dummy capacity as a node in order to
+\textit{induce} a sequence of unblockages that will untangle the deadlock.
 
 \begin{definition}
 At deadlock, a sequence of unblockages is \textsc{induced} by temporarily
-creating extra capacity for one customer at one of the nodes.
+creating extra capacity for one customer at one of the nodes, $u$.
 
 The induced sequence of unblockages is \textsc{feasible} if by the end of the
 sequence that extra capacity is not in use, and can therefore be removed.
@@ -328,12 +501,105 @@ Hence this is not a feasible induced sequence of unblockages.
 \end{center}
 \caption{Example of a deadlock where the induced sequence of unblockages by
 adding dummy capacity at Node A would not be feasible under the conditions set
-out in Remark~\ref{rmk:unblocking_sequence}.}
+out in Remark~\ref{rmk:unblocking_sequence}.
+On the right hand side is a depiction of $D(t)$, with the corresponding
+unblockage path given with dotted edges.}
 \label{fig:counter_example}
 \end{figure}
 
+\begin{lemma}\label{thrm:feasible_is_cycle}
+A sequence of unblockages induced by introducing artificial capacity at node
+$u$ is feasible if and only if it corresponds to a path in $D(t)$ that is a
+cycle that originates and terminates at $u$.
+\end{lemma}
+
+\begin{proof}
+By Lemma~\ref{thrm:graph_traversal} a sequence of unblockages which begins by
+capacity becoming available at node $u$ traces a path $\mathcal{P}$ in $D(t)$;
+which is interpreted as the free capacity itself travelling along the path from
+node to node.
+
+Introducing artificial capacity at $u$ temporarily alters its queue capacity.
+
+If the sequence is feasible then the system returns to a valid state that
+doesn't violate the system's original capacity constraints, and so the
+artificial capacity eventually propagates back to $u$.
+Therefore $u$ features in $\mathcal{P}$ once again.
+Now as this artificial capacity is filled no more further unblockages will be
+triggered, therefore $\mathcal{P}$ terminates, and so it is directed cycle
+originating and terminating at $u$.
+
+Conversely, if $\mathcal{P}$ is a cycle that originates and terminates at $u$,
+then the artificial capacity has propagated back to $u$, and so the induced
+sequence of unblockages is feasible.
+\end{proof}
+
+
+To avoid a situation such as this, it will be required to constrain the sequence
+of unblockages to ensure that $\mathcal{P}$ is a cycle.
+
+\subsection{Constrained Induced Sequence of Unblockages}
+Now we define a constrained induced sequence of unblockages.
+We have already set out in Lemma~\ref{thrm:graph_traversal} that a sequence of
+unblockages corresponds to a path in $D(t)$, and that a sequence of unblockages
+induced by introducing artificial capacity at $u$ corresponds to a path
+originating at $u$.
+Therefore we can define a constrained sequence of unblockages by constraining
+its corresponding path: 
+
+\begin{definition}\label{def:constrained_unblockages}
+Define a constrained induced sequence of unblockages caused by introducing
+artificial capacity at node $u$ by the rules that unblocking $B_k$ will also
+trigger the unblocking of $B_h$ if:
+\begin{enumerate}
+  \item \label{pnt:necessity_eulerian}
+  $(\nu_{\text{to}}(B_k), \nu_{\text{at}}(B_h)) \in E_{H_u}$, that is that $B_h$
+  is blocked by $B_k$; and
+  \item \label{pnt:choice_eulerian}
+  $h = \min(i \in \mathcal{N}(t) \; | \; (\nu_{\text{to}}(B_k), \nu_{\text{at}}(B_h)) \in E_{H_u})$,
+  that is out of all the active blockages caused by $B_k$, $B_h$ was the first
+  to become blocked.
+\end{enumerate}
+\end{definition}
+
+Note that these rules are the same as those introduced in
+Remark~\ref{rmk:unblocking_sequence}, however we constrain the edges traversed
+to those in $H_u$, defined in Definition~\ref{def:Hu}, rather than the full edge
+set of $D(t)$.
+
+\begin{theorem}
+A constrained sequence of unblockages induced by introducing artificial capacity
+at node $u$ is feasible.
+\end{theorem}
+
+\begin{proof}
+From Lemma~\ref{thrm:feasible_is_cycle}, the path $\mathcal{P}$ corresponding to
+a feasible sequence of unblockages induced by introducing artificial capacity at
+$u$ is a cycle originating and terminating at $u$.
+Definition~\ref{def:constrained_unblockages} constrains unblocking customers to
+those corresponding to edges in $H_u$, while Condition~\ref{pnt:choice_eulerian}
+of that definition determines the choice of edge to traverse whenever there is a
+choice: that is choosing the customer who has been blocked longest.
+Hence the result should hold for any arbitrary ordering.
+
+As $H_u$ is Eulerian, then $\text{deg}_{\text{in}}(v)=\text{deg}_{\text{out}}(v)$
+for every $v \in V_{H_u}$.
+If the path $\mathcal{P}$ enters node $v$ then it `consumes' an in-degree, and
+if it exits node $v$ then it `consumes' an out-degree, and the degree parity is
+maintained.
+$\mathcal{P}$ originates at $u$, then $\text{deg}_{\text{out}}(u) > 0$, and
+therefore $\text{deg}_{\text{in}}(u) > 0$ also.
+Each time it visits a vertex $v \neq u$ it is always able to escape that vertex,
+due to degree parity, hence it cannot ever get stuck at some $v \neq u$.
+Therefore the path will always find its way back to $u$, where it can terminate
+at $u$ as a cycle.
+Hence its corresponding sequence of unblockages is feasible.
+\end{proof}
+
+\subsection{Choosing an Eulerian Subgraph}
 
 \section{Markov Models of Deadlock Resolution}\label{sec:markov}
+
 
 \bibliographystyle{plain}
 \bibliography{refs}

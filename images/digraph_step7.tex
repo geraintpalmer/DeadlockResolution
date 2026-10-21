@@ -13,11 +13,11 @@
   \node (C1) [style={minimum size=2.5cm,draw=black,fill=black!10!white,text=black,shape=circle}] at (-4.045, -2.939) {\huge $C_1$};
   \node (C2) [style={minimum size=2.5cm,draw=black,fill=black!10!white,text=black,shape=circle}] at (1.545, -4.755) {\huge $C_2$};
 
-  \draw[ultra thick, -triangle 90] (A1) -- (B1);
+  \draw[ultra thick, -triangle 90] (A1) [bend left=15] to (B1);
   \draw[ultra thick, -triangle 90] (A1) -- (B2);
   \draw[ultra thick, -triangle 90] (C1) -- (B1);
   \draw[ultra thick, -triangle 90] (C1) -- (B2);
-  \draw[ultra thick, -triangle 90] (B1) -- (A1);
+  \draw[ultra thick, -triangle 90] (B1) [bend left=15] to (A1);
 
 \end{tikzpicture}
 
