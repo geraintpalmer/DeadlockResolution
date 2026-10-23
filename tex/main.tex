@@ -55,17 +55,25 @@ queueing networks, and analysed Markovian models of deadlocking queueing system.
 This section summarises the findings of that work, defining concepts and
 notation and results as needed.
 
-Queueing networks are described as open if customers can enter and leave the 
-system from the exterior, while restricted networks contain at least one service
-centre with limited queueing space or capacity before it, turning away
-externally arriving customers when full, and inducing blocking for internally
-routed customers when full.
+A service centre comprises a finite number of servers and a queueing buffer.
+Arriving customers enter service immediately if a server is free, otherwise they
+wait in the buffer subject to a given service discipline, or are turned away if
+the buffer is full.
+When there are multiple service centres, service centres are called nodes of a
+queueing network: when a customer completes service at a service centre, that is
+spends a random amount of time there, there is a probability that they will then
+arrive at another node.
+The network is open if customers can enter and leave from the exterior, and
+restricted if at least one node has finite capacity, causing externally arriving
+customers to be turned away and internally routed customers to be blocked when
+full.
 
-This works considers Type I blocking only \cite{onvural1986equivalencies}: once
-a customer finishes their service and wishes to join another node's queue, they
-are blocked from joining that queue if it is full; while blocked that customer
-remains with its server until capacity becomes available at its destination;
-during this time that server is unavailable to begin another customer's service
+There are three types of blocking, and this works considers Type I blocking
+only \cite{onvural1986equivalencies}: once a customer finishes their service
+and wishes to join another node's queue, they are blocked from joining that
+queue if it is full; while blocked that customer remains with its server until
+capacity becomes available at its destination; during this time that server is
+unavailable to begin another customer's service.
 This gives rise to the idea that one customer can be blocked by another
 customer: that is if customer A at node 1 is blocked from entering node 2
 because it is full, then customer A is waiting on the customers who are with the
@@ -599,6 +607,47 @@ Hence its corresponding sequence of unblockages is feasible.
 \subsection{Choosing an Eulerian Subgraph}
 
 \section{Markov Models of Deadlock Resolution}\label{sec:markov}
+
+\section{Discussion}
+\subsection{Other Blocking Mechanisms}
+This paper is concerned with Type I blocking only.
+Here we discuss why this framework would not work for blocking of Types II and
+III. First, recall the differences in the three types of blocking
+\cite{onvural1986equivalencies}:
+
+\begin{itemize}
+  \item Type I blocking: here a customer is blocked after completing service.
+  \item Type II blocking: here a customer declares their destination before
+  beginning service, and is only granted service if there is available capacity
+  at their destination node, that is they are blocked before service.
+  \item Type III blocking: here a customer is required to repeat their service
+  if there is no capacity at the destination node, and their destination is
+  re-sampled.
+\end{itemize}
+
+At first glance, Type II and Type I blocking are similar, in that destinations
+are fixed.
+The key difference is that at an unblockage, for Type I blocking the movement is
+immediate, whereas for Type II blocking the unblocked customer now has to
+experience their service time before moving to the destination node.
+This means that the next downstream blockage is delayed; hence sequences of
+unblockages do not happen immediately, as the service time delay propagates
+through the sequence.
+As such, a feasible induced sequence of unblockages under Type II blocking will
+not be immediate, and so the artificial capacity introduced to induce the
+sequence will not immediately disappear, violating the rules of the queueing
+network.
+
+A similar situation might occur under Type III blocking, as the service is
+repeated at blockage, meaning those in deadlock will be perpetually repeating
+their service until some intervention.
+However a further complication arises here too: as the blockage destinations are
+constantly re-sampled, then $D(t)$ is probabilistic, where edges have particular
+probabilities of existing at any point.
+Therefore it cannot be guaranteed that the path $\mathcal{P}$ associated with
+the induced sequence of unblockages by adding artificial capacity at node $u$
+ever returns to $u$, as edges may cease to exist by the time the unblockages
+occur.
 
 
 \bibliographystyle{plain}
