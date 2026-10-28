@@ -38,7 +38,7 @@
 \newtheorem{theorem}{Theorem}
 
 \title{\bf Modelling Deadlock Resolution in Open Restricted Queueing Networks}
-\author{Geraint I. Palmer-Liyu}
+\author{Geraint I. Palmer-Liyu \&  Rhyd Lewis}
 
 \begin{document}
 \maketitle
@@ -605,8 +605,44 @@ Hence its corresponding sequence of unblockages is feasible.
 \end{proof}
 
 \subsection{Choosing an Eulerian Subgraph}
+\begin{tcolorbox}[colback=orange!5!white,colframe=orange!75!black,title=TODO]
+Note that what we ideally want is a maximum cardinality minimum weight Eulerian subgraph. However - this is NP-Hard (cite this).
 
-\section{Markov Models of Deadlock Resolution}\label{sec:markov}
+\begin{itemize}
+  \item Framework A: First we will use a greedy algorithm to find a maximal
+  cardinality circuit beginning and ending in $u$ - which is Eulerian by
+  definition.
+  \item Then we could possibly add the minimum weight objective?
+  \item Framework B: Finally, we can consider changing the \textit{ordering} of
+  the edges so  that the constrained unblockaged does indeed follow the circuit
+  - ensuring all edges are traversed, hence all possible unblocked customers to
+  become unblocked.
+\end{itemize}
+\end{tcolorbox}
+
+
+\section{Inter-Deadlock Times}\label{sec:interdeadlock}
+\begin{tcolorbox}[colback=orange!5!white,colframe=orange!75!black,title=TODO]
+Once it's all up and running, we can run a simulation with automated deadlock detection and resolution. We are interested in $T$, the inter-deadlock time distribution, the distribution of durations between two consecutive deadlocks. Experiments to run:
+\begin{itemize}
+  \item Relationship between $T$ and queueing network parameters (in particular
+  recreate the experiments from first paper).
+  \item Relationship between $T$ and time-to-first-deadlock (considered in first
+  paper).
+  \item Look at the `gap' between $T$ under Frameworks A and B - does queueing
+  network parameters affect the gap?
+  \item Consider large networks: $N$ nodes each with $c$ servers, equal
+  transition probability everywhere. How does $T$ (and gap) change as $N$ or $c$
+  increases? What if not all nodes are connected? Randomly generate a strongly
+  connected network using some connectivity parameter (low = simple cycle; high
+  = complete graph), how does $T$ change with network connectivity?
+\end{itemize}
+
+(Possibly rather than look at inter-deadlock times, we can make it scale
+invariant, and look at number of simulation events between deadlocks...?)
+\end{tcolorbox}
+
+
 
 \section{Discussion}
 \subsection{Other Blocking Mechanisms}
